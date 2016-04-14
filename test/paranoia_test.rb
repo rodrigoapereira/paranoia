@@ -27,6 +27,7 @@ def setup!
     'plain_models' => 'deleted_at DATETIME',
     'callback_models' => 'deleted_at DATETIME',
     'fail_callback_models' => 'deleted_at DATETIME',
+    'fail_restore_callback_models' => 'deleted_at DATETIME',
     'related_models' => 'parent_model_id INTEGER, parent_model_with_counter_cache_column_id INTEGER, deleted_at DATETIME',
     'asplode_models' => 'parent_model_id INTEGER, deleted_at DATETIME',
     'employers' => 'name VARCHAR(32), deleted_at DATETIME',
@@ -489,6 +490,13 @@ class ParanoiaTest < test_framework
     model.reload
 
     assert model.instance_variable_get(:@restore_callback_called)
+  end
+
+  def test_fail_restore_callback
+    model = FailRestoreCallbackModel.create
+    assert model.destroy
+
+    assert_equal false, model.restore
   end
 
   def test_really_destroy
@@ -1032,6 +1040,18 @@ class FailCallbackModel < ActiveRecord::Base
   acts_as_paranoid
 
   before_destroy { |_|
+    if ActiveRecord::VERSION::MAJOR < 5
+      false
+    else
+      throw :abort
+    end
+  }
+end
+
+class FailRestoreCallbackModel < ActiveRecord::Base
+  acts_as_paranoid
+
+  before_restore { |_|
     if ActiveRecord::VERSION::MAJOR < 5
       false
     else
